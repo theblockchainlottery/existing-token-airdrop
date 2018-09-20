@@ -8,10 +8,9 @@ contract ExistingTokenAirdrop {
     uint256 startTime;
     uint256 endTime;
     uint256 airdropRuntime;
+    uint256 public maxSubscribers;
     uint256 public numberOfSubscribers;
-    uint256 maxSubs;
-    uint256 tokenAmount; 
-    bool private funded;
+    uint256 public tokenAmount;
     
     struct Subscribers {
         address _walletAddress;
@@ -40,16 +39,16 @@ contract ExistingTokenAirdrop {
     }
 
     //called on contract creation (runtime is in seconds 604800 for a week)
-    constructor(uint256 _airdropTokenAmount, uint256 _airdropRuntimeInSeconds, address _tokenContractAddress) public {
+    constructor(uint256 _airdropTokenAmount, uint256 _airdropRuntimeInSeconds, uint256 _maxAirdropSubscribers, address _tokenContractAddress) public {
         require(_airdropRuntimeInSeconds > 0);
         owner = msg.sender;
-        maxSubs = 1000; // set maximum aount of airdrop subscribers
+        maxSubscribers = _maxAirdropSubscribers; // set maximum aount of airdrop subscribers
         tokenContract = _tokenContractAddress; // sets the address of the existing ERC-20 token contract that this contract will interact with
         airdropRuntime = _airdropRuntimeInSeconds / 1 seconds;
         startTime = now; //set startTime , now is alias for block.timestamp (seconds since unix epoch)
         endTime = startTime + airdropRuntime; // set endTime
         uint256 airdropSupply = _airdropTokenAmount; // set amount to airdrop 
-        tokenAmount = airdropSupply / maxSubs; // calculate amount of tokens per subscriber
+        tokenAmount = airdropSupply / maxSubscribers; // calculate amount of tokens per subscriber
         emit ContractMsg("Airdrop contract deployed successfully");//event 
     }
     
@@ -93,7 +92,7 @@ contract ExistingTokenAirdrop {
     function newSubscriber() public
     {
         require(endTime > now && queryERC20Balance(this) > 0);
-        if(numberOfSubscribers > maxSubs){
+        if(numberOfSubscribers > maxSubscribers){
             emit ContractMsg("Airdrop Subscription Hardcap Reached, No Tokens Left");
             revert();
         }
@@ -146,6 +145,11 @@ contract ExistingTokenAirdrop {
     //returns the token balance of specified address
     function queryERC20Balance(address _addressToQuery) view public returns (uint) {
         return EIP20Interface(tokenContract).balanceOf(_addressToQuery);
+    }
+    
+    //returns the token balance of this contract
+    function contractTokenBalance() public view returns (uint) {
+       return queryERC20Balance(this);
     }
     
     //returns the token balance of function caller
